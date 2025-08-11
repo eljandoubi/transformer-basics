@@ -39,9 +39,8 @@ def cross_entropy(
     """
     maxes, _ = inputs.max(dim=-1, keepdim=True)
     shift_features = inputs - maxes
-    logsumexp = shift_features.exp().sum(dim=-1).log()
-    indices = [torch.arange(inputs.size(0)), targets]
-    return (logsumexp - shift_features[indices]).mean()
+    logsumexp = shift_features.exp().sum(dim=-1, keepdim=True).log()
+    return (logsumexp - shift_features.gather(-1, targets.unsqueeze(-1))).mean()
 
 
 @torch.no_grad()

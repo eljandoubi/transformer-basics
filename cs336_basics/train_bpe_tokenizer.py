@@ -94,7 +94,7 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str], split
             pair_counts[pair] += cnt
             pair_locs[pair].add(word)
 
-    merges = []
+    merges: list[str] = []
     # BPE merge loop
     for _ in tqdm(range(num_merges), desc="BPE merges"):  # type: ignore
         if not pair_counts:

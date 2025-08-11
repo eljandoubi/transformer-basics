@@ -30,9 +30,6 @@ def trunc_normal(
     return tensor
 
 
-torch.nn.Linear
-
-
 class Linear(Module):
     """
     a Linear layer, compute the transformation of a batched input.
@@ -65,6 +62,9 @@ class Linear(Module):
         """
         return einsum(in_features, self.weight, "... d_in, d_out d_in -> ... d_out")
 
+    def extra_repr(self) -> str:
+        return f"in_features={self.d_in}, out_features={self.d_out}"
+
 
 class Embedding(Module):
     """an Embedding layer, get the embeddings for a batch of token ids."""
@@ -93,6 +93,9 @@ class Embedding(Module):
             Float[Tensor, "... d_model"]: Batch of embeddings returned by your Embedding layer.
         """
         return self.weight[token_ids]
+
+    def extra_repr(self) -> str:
+        return f"vocab_size={self.vocab_size}, out_features={self.d_model}"
 
 
 def silu(x: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
@@ -164,6 +167,9 @@ class RMSNorm(Module):
             RMSNorm of the `x`.
         """
         return x * self.weight / torch.sqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+
+    def extra_repr(self) -> str:
+        return f"dim={self.d_model}, eps={self.eps}"
 
 
 def scaled_dot_product_attention(
@@ -251,6 +257,7 @@ class RotaryPositionalEmbedding(Module):
         super().__init__()
         self.d_k = d_k
         self.theta = theta
+        self.max_seq_len = max_seq_len
         power = -2 * torch.arange(d_k // 2, dtype=torch.float32) / d_k
         inv_freq = theta ** power.unsqueeze(0)
         positions = torch.arange(max_seq_len, dtype=torch.float32).unsqueeze(1)
@@ -277,6 +284,9 @@ class RotaryPositionalEmbedding(Module):
         sin = self.sin[token_positions].repeat_interleave(2, -1)
         sin = sin * self.sign
         return cos * x + sin * x[..., self.index]
+
+    def extra_repr(self) -> str:
+        return f"head_dim={self.d_k}, theta={self.theta}, max_seq_len={self.max_seq_len}"
 
 
 class RoPEMultiheadAttention(Module):
@@ -396,6 +406,10 @@ class TransformerDecoder(Module):
         )
         self.ln_final = RMSNorm(d_model)
         self.lm_head = Linear(d_model, vocab_size)
+
+    def tie_weights(self):
+        assert self.lm_head.weight.shape == self.token_embeddings.weight.shape
+        self.lm_head.weight = self.token_embeddings.weight
 
     def forward(
         self,

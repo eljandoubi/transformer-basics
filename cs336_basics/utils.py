@@ -1,7 +1,9 @@
 import os
+import random
 from typing import IO, BinaryIO
 import torch
 import numpy.typing as npt
+import numpy as np
 
 
 def get_batch(
@@ -27,7 +29,9 @@ def get_batch(
     idx_sample = torch.randint(0, len(dataset) - context_length, (batch_size,))
     idx_sample = idx_sample[:, None] + torch.arange(context_length + 1)
     data = torch.from_numpy(dataset)
-    sample = data[idx_sample].to(device)
+    sample = data[idx_sample]
+    if "cuda" in device:
+        sample = sample.pin_memory().to(device, non_blocking=True)
     return (sample[:, :-1], sample[:, 1:])
 
 
@@ -55,7 +59,7 @@ def load_checkpoint(
     src: str | os.PathLike | BinaryIO | IO[bytes],
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
-):
+) -> int:
     """
     Given a serialized checkpoint (path or file-like object), restore the
     serialized state to the given model and optimizer.
@@ -74,3 +78,16 @@ def load_checkpoint(
     model.load_state_dict(loaded_checkpoint["model"])
     optimizer.load_state_dict(loaded_checkpoint["optimizer"])
     return loaded_checkpoint["iteration"]
+
+
+def set_seed(seed: int = 42):
+    """Set seed
+    Args:
+        seed: int (default 42)
+    Return
+        None
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
