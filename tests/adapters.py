@@ -374,9 +374,8 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    print("here")
+    
     transformer = model.TransformerDecoder(vocab_size, context_length, d_model, num_layers, num_heads, d_ff, rope_theta)
-    print("there")
     transformer.load_state_dict(weights)
     return transformer(in_indices)
 
